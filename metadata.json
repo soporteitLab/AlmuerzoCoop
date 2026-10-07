@@ -1,0 +1,6 @@
+{
+  "name": "Cooperativa de Río Tercero — Control de Almuerzo Call Center",
+  "description": "Sistema de gestión de turnos de almuerzo y recesos para operadores de Call Center de la Cooperativa de Obras y Servicios Públicos de Río Tercero.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

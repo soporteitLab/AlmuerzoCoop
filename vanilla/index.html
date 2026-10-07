@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cooperativa de Río Tercero — Control de Almuerzo Call Center (Vanilla)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+      @keyframes urgent-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+        50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+      }
+      .animate-urgent-pulse { animation: urgent-pulse 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900 antialiased font-sans pb-16 selection:bg-blue-600 selection:text-white">
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="bg-slate-900 text-white shadow-xl sticky top-0 z-30 border-b border-slate-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3.5">
+          <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-black/40 text-white shrink-0 border border-blue-400/20">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 18v-6a9 9 0 0118 0v6M3 18a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3v5zm18 0a2 2 0 002-2v-3a2 2 0 00-2-2h-1v5a2 2 0 002 2h1z"/></svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs uppercase tracking-wider font-bold text-cyan-400">Cooperativa de Río Tercero</span>
+                <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest bg-blue-900/60 text-cyan-200 rounded-full border border-blue-500/20">Área Call Center</span>
+              </div>
+              <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                Control de Almuerzo Call Center
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+              </h1>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
+            <div class="flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-lg border border-slate-800 text-cyan-100 font-mono text-sm font-bold shadow-inner">
+              <svg class="w-4 h-4 text-cyan-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span id="clock-display">--:--:--</span>
+            </div>
+
+            <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 shadow-inner">
+              <button id="btn-role-operador" type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer bg-blue-600 text-white shadow-md">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                <span>Operador</span>
+              </button>
+              <button id="btn-role-supervisor" type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer text-slate-400 hover:text-white">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <span>Supervisor</span>
+                <span id="badge-clave" class="text-[10px] bg-slate-900/80 text-amber-300 px-1 py-0.2 rounded font-mono">Clave</span>
+              </button>
+            </div>
+
+            <button id="btn-lock-supervisor" type="button" class="hidden items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-800 text-red-200 hover:bg-red-900 text-xs font-semibold cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              <span>Bloquear</span>
+            </button>
+
+            <button id="btn-sound-toggle" type="button" class="p-2 rounded-lg border bg-slate-800 border-slate-700 text-cyan-300 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="sub-header-bar" class="px-4 sm:px-8 py-1.5 text-xs font-semibold flex items-center justify-between border-t bg-blue-950/40 text-blue-200 border-blue-900/40">
+        <div id="role-info-text" class="flex items-center gap-2">
+          <span>Perfil Activo: <strong>Operador</strong> — Localiza tu legajo para marcar tu salida o retorno de almuerzo.</span>
+        </div>
+        <div id="supervisor-actions" class="hidden items-center gap-2">
+          <button id="btn-open-config" type="button" class="hover:underline flex items-center gap-1 text-amber-200 text-[11px] cursor-pointer">Configurar Parámetros</button>
+          <span class="opacity-40">|</span>
+          <button id="btn-open-add" type="button" class="hover:underline flex items-center gap-1 text-amber-200 text-[11px] cursor-pointer">Nuevo Operador</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      <section class="space-y-3">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
+            <span class="text-xs sm:text-sm font-semibold text-slate-500">Total en Turno</span>
+            <div id="kpi-total" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</div>
+          </div>
+          <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
+            <span class="text-xs sm:text-sm font-semibold text-emerald-800">En Atención / Disponibles</span>
+            <div id="kpi-available" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</div>
+          </div>
+          <div id="kpi-lunch-card" class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
+            <span class="text-xs sm:text-sm font-semibold text-amber-800">En Almuerzo / Receso</span>
+            <div id="kpi-lunch" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">0</div>
+            <div id="kpi-lunch-limit" class="text-[11px] text-slate-500 mt-1">Máximo permitido: <strong>3</strong></div>
+          </div>
+          <div id="kpi-exceeded-card" class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200">
+            <span class="text-xs sm:text-sm font-semibold text-slate-500">Excesos de Tiempo</span>
+            <div id="kpi-exceeded" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">0</div>
+            <div id="kpi-exceeded-status" class="text-[11px] text-slate-500 mt-1">Tiempos en norma</div>
+          </div>
+        </div>
+
+        <div id="capacity-alert-banner" class="hidden bg-red-600 text-white px-4 py-3 rounded-2xl shadow-md items-center justify-between gap-3 animate-pulse">
+          <div class="text-sm font-extrabold uppercase">¡Atención! Cupo Máximo Alcanzado</div>
+          <button id="btn-banner-adjust" type="button" class="px-3 py-1 bg-white text-red-700 text-xs font-bold rounded-lg cursor-pointer">Ajustar Cupo</button>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 space-y-3">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <input id="search-input" type="text" placeholder="Buscar por Nombre, Apellido o Legajo..." class="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 text-sm outline-none" />
+          <div class="flex items-center gap-1.5">
+            <button id="filter-all" data-status="TODOS" type="button" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white cursor-pointer">Todos (<span id="count-filter-all">0</span>)</button>
+            <button id="filter-available" data-status="DISPONIBLE" type="button" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 cursor-pointer">Disponibles (<span id="count-filter-available">0</span>)</button>
+            <button id="filter-lunch" data-status="ALMUERZO" type="button" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 cursor-pointer">En Almuerzo (<span id="count-filter-lunch">0</span>)</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-slate-800">Operadores en Servicio (<span id="operators-count">0</span>)</h2>
+          <button id="btn-add-op-header" type="button" class="hidden px-3 py-1.5 text-xs font-bold bg-blue-600 text-white rounded-xl shadow-xs cursor-pointer">+ Agregar Operador</button>
+        </div>
+        <div id="operators-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+      </section>
+
+      <section class="bg-white rounded-2xl p-4 sm:p-6 shadow-xs border border-slate-200 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-800">Historial de Registros (Hoy) — <span id="records-count">0 turnos</span></h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-export-csv" type="button" class="px-3 py-2 text-xs font-bold bg-slate-900 text-white rounded-xl cursor-pointer">Exportar CSV</button>
+            <button id="btn-clear-records" type="button" class="hidden px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl cursor-pointer">Reiniciar Día</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold">
+              <tr>
+                <th class="px-4 py-3">Legajo</th>
+                <th class="px-4 py-3">Operador</th>
+                <th class="px-3 py-3 text-center">Hora Salida</th>
+                <th class="px-3 py-3 text-center">Hora Regreso</th>
+                <th class="px-3 py-3 text-center">Duración Total</th>
+                <th class="px-4 py-3 text-right">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="records-tbody" class="divide-y divide-slate-100 bg-white"></tbody>
+          </table>
+          <div id="records-empty" class="text-center py-8 text-slate-400 text-sm">No hay registros de recesos completados hoy.</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modales -->
+    <div id="modal-password" class="hidden fixed inset-0 z-50 bg-slate-950/70 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <h3 class="font-bold text-slate-900">Acceso a Panel de Supervisor</h3>
+        <form id="form-password" class="space-y-4">
+          <input id="input-password" type="password" required placeholder="Contraseña de supervisor" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm" />
+          <div id="password-error-msg" class="hidden text-xs font-semibold text-red-600">Contraseña incorrecta. Acceso restringido.</div>
+          <div class="flex justify-end gap-2">
+            <button id="btn-cancel-password" type="button" class="px-4 py-2 text-xs font-bold text-slate-600 cursor-pointer">Cancelar</button>
+            <button type="submit" class="px-5 py-2 bg-amber-600 text-white font-bold text-xs rounded-xl cursor-pointer">Desbloquear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modal-add-operator" class="hidden fixed inset-0 z-50 bg-slate-900/60 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <h3 class="font-bold text-slate-900">Registrar Operador (Sólo Nombre y Apellido)</h3>
+        <form id="form-add-operator" class="space-y-4">
+          <input id="input-add-name" type="text" required placeholder="Nombre" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+          <input id="input-add-lastname" type="text" required placeholder="Apellido" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
+          <div class="flex justify-end gap-2">
+            <button id="btn-cancel-add" type="button" class="px-4 py-2 text-xs font-bold text-slate-600 cursor-pointer">Cancelar</button>
+            <button type="submit" class="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl cursor-pointer">Registrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modal-config" class="hidden fixed inset-0 z-50 bg-slate-900/60 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <h3 class="font-bold text-slate-900">Parámetros de Receso</h3>
+        <div>
+          <label class="text-xs font-bold text-slate-600">Cupo Máximo Simultáneo: <span id="slider-capacity-val" class="font-mono text-amber-600">3</span></label>
+          <input id="slider-capacity" type="range" min="1" max="6" value="3" class="w-full accent-amber-600 cursor-pointer" />
+        </div>
+        <div class="flex justify-end">
+          <button id="btn-save-config" type="button" class="px-5 py-2 bg-slate-900 text-white font-bold text-xs rounded-xl cursor-pointer">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-delete" class="hidden fixed inset-0 z-50 bg-slate-900/60 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+        <h3 class="font-bold text-slate-900">¿Eliminar Operador?</h3>
+        <p id="delete-op-desc" class="text-xs text-slate-500"></p>
+        <div class="flex justify-center gap-2">
+          <button id="btn-cancel-delete" type="button" class="px-4 py-2 text-xs font-bold text-slate-600 cursor-pointer">Cancelar</button>
+          <button id="btn-confirm-delete" type="button" class="px-4 py-2 text-xs font-bold bg-red-600 text-white rounded-xl cursor-pointer">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-clear-records" class="hidden fixed inset-0 z-50 bg-slate-900/60 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+        <h3 class="font-bold text-slate-900">¿Reiniciar bitácora del día?</h3>
+        <div class="flex justify-center gap-2">
+          <button id="btn-cancel-clear" type="button" class="px-4 py-2 text-xs font-bold text-slate-600 cursor-pointer">Cancelar</button>
+          <button id="btn-confirm-clear" type="button" class="px-4 py-2 text-xs font-bold bg-amber-600 text-white rounded-xl cursor-pointer">Reiniciar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script JavaScript Vanilla Puro -->
+    <script src="./app.js"></script>
+  </body>
+</html>
